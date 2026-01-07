@@ -1,0 +1,17 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+skip-string-normalization = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "I", "B"]
+ignore = []
+exclude = [
+    ".venv",
+    "__pycache__",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

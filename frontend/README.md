@@ -37,3 +37,26 @@ npm run preview
 
 Полный список функциональных и технических требований к проекту находится в корневом файле
 [`REQUIREMENTS.md`](../REQUIREMENTS.md).
+
+## Проверка кода и форматирование
+
+Для проверки кода используется ESLint, для автоформатирования — Prettier.
+
+```bash
+cd frontend
+npm install
+```
+
+Запуск линтера:
+
+```bash
+cd frontend
+npm run lint
+```
+
+Автоформатирование кода:
+
+```bash
+cd frontend
+npm run format
+```

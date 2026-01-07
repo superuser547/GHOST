@@ -37,3 +37,29 @@ uvicorn app.main:app --reload --port 8000
 ## Требования и спецификация
 
 Подробное функциональное и техническое описание проекта см. в корневом файле [REQUIREMENTS.md](../REQUIREMENTS.md).
+
+## Проверка кода и форматирование
+
+Для разработки рекомендуется использовать `black` и `ruff`.
+
+Установка dev-зависимостей:
+
+```bash
+cd backend
+# виртуальное окружение уже должно быть активировано
+pip install -r requirements-dev.txt
+```
+
+Запуск форматтера:
+
+```bash
+cd backend
+black app
+```
+
+Запуск линтера:
+
+```bash
+cd backend
+ruff check app
+```
