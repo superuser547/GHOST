@@ -1,3 +1,3 @@
-from .report import ReportMeta, WorkType
+from .report import BaseBlock, ReportBlockType, ReportMeta, WorkType
 
-__all__ = ["ReportMeta", "WorkType"]
+__all__ = ["ReportMeta", "WorkType", "ReportBlockType", "BaseBlock"]

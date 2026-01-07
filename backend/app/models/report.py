@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WorkType(str, Enum):
@@ -15,10 +16,23 @@ class WorkType(str, Enum):
     OTHER = "other"
 
 
+class ReportBlockType(str, Enum):
+    TITLE_PAGE = "title_page"
+    TOC = "toc"
+    SECTION = "section"
+    SUBSECTION = "subsection"
+    TEXT = "text"
+    LIST = "list"
+    TABLE = "table"
+    FIGURE = "figure"
+    REFERENCES = "references"
+    APPENDIX = "appendix"
+
+
 class ReportMeta(BaseModel):
     """
-    Meta-information about the report used both for title page
-    generation and for file naming.
+    Метаданные отчёта для генерации титульной страницы
+    и формирования имени файла.
     """
 
     preset: str = "misis_v1"
@@ -39,3 +53,19 @@ class ReportMeta(BaseModel):
 
     teacher_full_name: str
     submission_date: date
+
+
+class BaseBlock(BaseModel):
+    """
+    Базовый блок в структуре отчёта.
+
+    Специализированные типы блоков (раздел, текст, таблица, рисунок и т.д.)
+    будут расширять эту модель в следующих коммитах.
+    """
+
+    id: UUID = Field(default_factory=uuid4)
+    type: ReportBlockType
+    children: List["BaseBlock"] = Field(default_factory=list)
+
+
+BaseBlock.model_rebuild()
