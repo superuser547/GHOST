@@ -4,6 +4,8 @@
 В дальнейшем backend будет отвечать за генерацию отчётов по ГОСТ/МИСИС и работу с данными.
 Сейчас реализован только минимальный healthcheck-эндпоинт.
 
+Доменные модели начинаются с `ReportMeta` в `app/models/report.py`.
+
 ## Требования к окружению
 
 - Python 3.11+
@@ -62,4 +64,16 @@ black app
 ```bash
 cd backend
 ruff check app
+```
+
+## Тесты
+
+Для запуска тестов:
+
+```bash
+cd backend
+# убедиться, что виртуальное окружение активно и зависимости установлены:
+# pip install -r requirements.txt
+# pip install -r requirements-dev.txt
+pytest
 ```
