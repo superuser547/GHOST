@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -66,6 +66,84 @@ class BaseBlock(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     type: ReportBlockType
     children: List["BaseBlock"] = Field(default_factory=list)
+
+
+class SectionBlock(BaseBlock):
+    """
+    Верхнеуровневый раздел отчёта (например, ВВЕДЕНИЕ, ЗАКЛЮЧЕНИЕ).
+    """
+
+    type: Literal[ReportBlockType.SECTION] = ReportBlockType.SECTION
+    title: str
+    special_kind: Optional[Literal["INTRO", "CONCLUSION", "REFERENCES"]] = None
+
+
+class SubsectionBlock(BaseBlock):
+    """
+    Подраздел внутри раздела (уровень 2 или 3).
+    """
+
+    type: Literal[ReportBlockType.SUBSECTION] = ReportBlockType.SUBSECTION
+    level: Literal[2, 3]
+    title: str
+
+
+class TextBlock(BaseBlock):
+    """
+    Текстовый блок: один или несколько абзацев.
+    """
+
+    type: Literal[ReportBlockType.TEXT] = ReportBlockType.TEXT
+    text: str
+
+
+class ListBlock(BaseBlock):
+    """
+    Маркированный или нумерованный список.
+    """
+
+    type: Literal[ReportBlockType.LIST] = ReportBlockType.LIST
+    list_type: Literal["bulleted", "numbered"]
+    items: List[str] = Field(default_factory=list)
+
+
+class TableBlock(BaseBlock):
+    """
+    Таблица с подписью и двумерными данными.
+    """
+
+    type: Literal[ReportBlockType.TABLE] = ReportBlockType.TABLE
+    caption: str
+    rows: List[List[str]] = Field(default_factory=list)
+
+
+class FigureBlock(BaseBlock):
+    """
+    Рисунок (изображение) с подписью.
+    """
+
+    type: Literal[ReportBlockType.FIGURE] = ReportBlockType.FIGURE
+    caption: str
+    file_name: str
+
+
+class ReferencesBlock(BaseBlock):
+    """
+    Список использованных источников.
+    """
+
+    type: Literal[ReportBlockType.REFERENCES] = ReportBlockType.REFERENCES
+    items: List[str] = Field(default_factory=list)
+
+
+class AppendixBlock(BaseBlock):
+    """
+    Приложение (например, ПРИЛОЖЕНИЕ А) с собственными блоками.
+    """
+
+    type: Literal[ReportBlockType.APPENDIX] = ReportBlockType.APPENDIX
+    label: str
+    title: str
 
 
 BaseBlock.model_rebuild()
