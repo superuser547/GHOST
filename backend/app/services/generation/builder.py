@@ -3,7 +3,18 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from app.models import BaseBlock, Report, SectionBlock, SubsectionBlock, TextBlock
+from app.models import (
+    AppendixBlock,
+    BaseBlock,
+    FigureBlock,
+    ListBlock,
+    ReferencesBlock,
+    Report,
+    SectionBlock,
+    SubsectionBlock,
+    TableBlock,
+    TextBlock,
+)
 
 
 def _render_blocks(blocks: list[BaseBlock], heading_level: int) -> list[str]:
@@ -44,6 +55,70 @@ def _render_blocks(blocks: list[BaseBlock], heading_level: int) -> list[str]:
                 if idx > 0:
                     lines.append("")
                 lines.append(paragraph)
+        elif isinstance(block, ListBlock):
+            if not block.items:
+                continue
+
+            ensure_blank_line()
+
+            if block.list_type == "bulleted":
+                for item in block.items:
+                    lines.append(f"- {item}")
+            else:
+                for idx, item in enumerate(block.items, start=1):
+                    lines.append(f"{idx}. {item}")
+        elif isinstance(block, TableBlock):
+            if not block.rows or not block.rows[0]:
+                continue
+
+            ensure_blank_line()
+
+            header_cells = [cell or "" for cell in block.rows[0]]
+            header_line = "| " + " | ".join(header_cells) + " |"
+            lines.append(header_line)
+
+            separator_cells = ["---"] * len(header_cells)
+            separator_line = "| " + " | ".join(separator_cells) + " |"
+            lines.append(separator_line)
+
+            for row in block.rows[1:]:
+                row_cells = [cell or "" for cell in row]
+                if len(row_cells) < len(header_cells):
+                    row_cells.extend([""] * (len(header_cells) - len(row_cells)))
+                line = "| " + " | ".join(row_cells) + " |"
+                lines.append(line)
+        elif isinstance(block, FigureBlock):
+            if not block.file_name:
+                continue
+
+            ensure_blank_line()
+
+            caption = block.caption or ""
+            path = block.file_name
+            lines.append(f"![{caption}]({path})")
+        elif isinstance(block, ReferencesBlock):
+            if not block.items:
+                continue
+
+            ensure_blank_line()
+
+            heading_prefix = "#" * heading_level
+            lines.append(f"{heading_prefix} Список использованных источников")
+            for idx, item in enumerate(block.items, start=1):
+                lines.append(f"{idx}. {item}")
+        elif isinstance(block, AppendixBlock):
+            ensure_blank_line()
+
+            heading_prefix = "#" * heading_level
+            heading_text = f"ПРИЛОЖЕНИЕ {block.label}"
+            if block.title:
+                heading_text += f". {block.title}"
+            lines.append(f"{heading_prefix} {heading_text}")
+
+            child_lines = _render_blocks(block.children, heading_level + 1)
+            if child_lines:
+                lines.append("")
+                lines.extend(child_lines)
         else:
             continue
 
@@ -57,7 +132,7 @@ def build_markdown(report: Report, output_dir: Path) -> Path:
     - output_dir: каталог, где будет создан .md файл
     - returns: путь к созданному .md файлу
 
-    На этапе D1 тело Markdown содержит только заглушку.
+    Тело Markdown формируется из блоков отчёта.
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
