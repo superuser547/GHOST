@@ -3,7 +3,51 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from app.models import Report
+from app.models import BaseBlock, Report, SectionBlock, SubsectionBlock, TextBlock
+
+
+def _render_blocks(blocks: list[BaseBlock], heading_level: int) -> list[str]:
+    """
+    Рендерит список блоков отчёта в строки Markdown.
+
+    :param blocks: упорядоченный список блоков
+    :param heading_level: текущий уровень заголовка
+        для секций/подсекций (1 -> '#', 2 -> '##')
+    :return: список строк Markdown без завершающих переводов строк
+    """
+
+    lines: list[str] = []
+
+    def ensure_blank_line() -> None:
+        if lines and lines[-1] != "":
+            lines.append("")
+
+    for block in blocks:
+        if isinstance(block, SectionBlock):
+            ensure_blank_line()
+            lines.append("#" * heading_level + " " + block.title)
+            child_lines = _render_blocks(block.children, heading_level + 1)
+            if child_lines:
+                lines.append("")
+                lines.extend(child_lines)
+        elif isinstance(block, SubsectionBlock):
+            ensure_blank_line()
+            lines.append("#" * heading_level + " " + block.title)
+            child_lines = _render_blocks(block.children, heading_level + 1)
+            if child_lines:
+                lines.append("")
+                lines.extend(child_lines)
+        elif isinstance(block, TextBlock):
+            ensure_blank_line()
+            paragraphs = [p.strip() for p in block.text.split("\n\n") if p.strip()]
+            for idx, paragraph in enumerate(paragraphs):
+                if idx > 0:
+                    lines.append("")
+                lines.append(paragraph)
+        else:
+            continue
+
+    return lines
 
 
 def build_markdown(report: Report, output_dir: Path) -> Path:
@@ -48,8 +92,12 @@ def build_markdown(report: Report, output_dir: Path) -> Path:
 
     lines.append("---")
 
-    body_lines = ["", "# TODO: report content will be generated in future commits.", ""]
-    content = "\n".join(lines + body_lines)
+    body_lines = _render_blocks(report.blocks, heading_level=1)
+    if body_lines:
+        lines.append("")
+        lines.extend(body_lines)
+
+    content = "\n".join(lines) + "\n"
     file_path.write_text(content, encoding="utf-8")
 
     return file_path
