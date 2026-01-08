@@ -11,8 +11,9 @@ from app.models import (
 from app.services.validation.engine import RULES, validate_report
 
 
-def test_validate_report_with_empty_rules_returns_empty_result():
-    assert RULES == []
+def test_validate_report_with_no_rules_returns_empty_result():
+    original_rules = list(RULES)
+    RULES.clear()
 
     meta = ReportMeta(
         work_type=WorkType.PRACTICE,
@@ -36,6 +37,9 @@ def test_validate_report_with_empty_rules_returns_empty_result():
     assert result.errors == []
     assert result.warnings == []
     assert result.is_valid is True
+
+    RULES.clear()
+    RULES.extend(original_rules)
 
 
 def test_validate_report_applies_rules_and_aggregates_issues():

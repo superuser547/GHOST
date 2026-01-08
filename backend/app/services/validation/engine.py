@@ -31,3 +31,6 @@ def validate_report(report: Report) -> ValidationResult:
                 warnings.append(issue)
 
     return ValidationResult(errors=errors, warnings=warnings)
+
+
+from . import rules  # noqa: F401,E402
