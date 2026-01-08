@@ -2,8 +2,8 @@ from datetime import date
 
 from app.models import (
     Report,
-    ReportMeta,
     ReportBlockType,
+    ReportMeta,
     SectionBlock,
     TextBlock,
     WorkType,
