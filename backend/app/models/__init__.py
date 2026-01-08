@@ -14,6 +14,7 @@ from .report import (
     TextBlock,
     WorkType,
 )
+from .validation import ValidationIssue, ValidationIssueLevel, ValidationResult
 
 __all__ = [
     "ReportMeta",
@@ -30,4 +31,7 @@ __all__ = [
     "AppendixBlock",
     "ReportBlock",
     "Report",
+    "ValidationIssueLevel",
+    "ValidationIssue",
+    "ValidationResult",
 ]
