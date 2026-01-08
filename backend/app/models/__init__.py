@@ -6,6 +6,8 @@ from .report import (
     ReferencesBlock,
     ReportBlockType,
     ReportMeta,
+    Report,
+    ReportBlock,
     SectionBlock,
     SubsectionBlock,
     TableBlock,
@@ -26,4 +28,6 @@ __all__ = [
     "FigureBlock",
     "ReferencesBlock",
     "AppendixBlock",
+    "ReportBlock",
+    "Report",
 ]

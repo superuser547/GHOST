@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -65,7 +65,7 @@ class BaseBlock(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     type: ReportBlockType
-    children: List["BaseBlock"] = Field(default_factory=list)
+    children: List["ReportBlock"] = Field(default_factory=list)
 
 
 class SectionBlock(BaseBlock):
@@ -146,4 +146,32 @@ class AppendixBlock(BaseBlock):
     title: str
 
 
+ReportBlock = Annotated[
+    Union[
+        SectionBlock,
+        SubsectionBlock,
+        TextBlock,
+        ListBlock,
+        TableBlock,
+        FigureBlock,
+        ReferencesBlock,
+        AppendixBlock,
+    ],
+    Field(discriminator="type"),
+]
+
+
+class Report(BaseModel):
+    """
+    Полная модель отчёта, используемая как структура файла проекта.
+
+    - meta: метаданные отчёта (титульный лист, реквизиты студента/преподавателя).
+    - blocks: упорядоченный список верхнеуровневых блоков отчёта.
+    """
+
+    meta: ReportMeta
+    blocks: List[ReportBlock] = Field(default_factory=list)
+
+
 BaseBlock.model_rebuild()
+Report.model_rebuild()

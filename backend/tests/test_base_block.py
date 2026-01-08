@@ -1,4 +1,4 @@
-from app.models.report import BaseBlock, ReportBlockType
+from app.models.report import BaseBlock, ReportBlockType, TextBlock
 
 
 def test_base_block_creation_defaults():
@@ -11,7 +11,7 @@ def test_base_block_creation_defaults():
 
 
 def test_base_block_with_children():
-    child = BaseBlock(type=ReportBlockType.TEXT)
+    child = TextBlock(text="Пример текста")
     parent = BaseBlock(type=ReportBlockType.SECTION, children=[child])
 
     assert len(parent.children) == 1
@@ -20,7 +20,7 @@ def test_base_block_with_children():
 
 
 def test_base_block_serialization_roundtrip():
-    child = BaseBlock(type=ReportBlockType.TEXT)
+    child = TextBlock(text="Пример текста")
     parent = BaseBlock(type=ReportBlockType.SECTION, children=[child])
 
     data = parent.model_dump()
