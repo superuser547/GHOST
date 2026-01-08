@@ -1,8 +1,10 @@
 from datetime import date
 
 from app.models import (
+    AppendixBlock,
     FigureBlock,
     ListBlock,
+    ReferencesBlock,
     Report,
     ReportMeta,
     SectionBlock,
@@ -12,6 +14,7 @@ from app.models import (
 )
 from app.services.validation import rules as validation_rules
 from app.services.validation.engine import validate_report
+from app.services.validation.rules import iter_blocks
 
 
 def build_valid_report() -> Report:
@@ -45,18 +48,35 @@ def build_valid_report() -> Report:
     )
     main_section.children.append(
         FigureBlock(
-            caption="Рисунок 1 – Схема",
+            caption="Рисунок 1 – Схема установки",
             file_name="figure1.png",
         )
     )
+    main_section.children.append(TextBlock(text="Комментарий к рисунку и таблице."))
 
     conclusion = SectionBlock(title="ЗАКЛЮЧЕНИЕ", special_kind="CONCLUSION")
     conclusion.children.append(TextBlock(text="Здесь формулируются выводы."))
 
-    return Report(meta=meta, blocks=[intro, main_section, conclusion])
+    references = ReferencesBlock(
+        items=[
+            "ГОСТ 7.0.5-2008. Библиографическая ссылка.",
+            "Методические указания НИТУ МИСИС по оформлению отчётов.",
+        ]
+    )
+
+    appendix = AppendixBlock(
+        label="А",
+        title="Дополнительные материалы",
+        children=[TextBlock(text="Текст приложения.")],
+    )
+
+    return Report(
+        meta=meta,
+        blocks=[intro, main_section, conclusion, references, appendix],
+    )
 
 
-def test_valid_report_has_no_issues_for_basic_rules():
+def test_valid_report_has_no_issues_for_all_rules():
     report = build_valid_report()
 
     result = validate_report(report)
@@ -138,3 +158,99 @@ def test_empty_captions_for_table_and_figure_produce_errors():
     error_codes = {issue.code for issue in result.errors}
     assert "TABLE_HAS_CAPTION" in error_codes
     assert "FIGURE_HAS_CAPTION" in error_codes
+
+
+def test_section_ending_with_figure_produces_section_ends_with_media_error():
+    report = build_valid_report()
+
+    for block in report.blocks:
+        if isinstance(block, SectionBlock) and block.special_kind is None:
+            if isinstance(block.children[-1], TextBlock):
+                block.children.pop()
+            break
+
+    result = validate_report(report)
+
+    error_codes = {issue.code for issue in result.errors}
+    assert "SECTION_ENDS_WITH_MEDIA" in error_codes
+
+
+def test_duplicate_appendix_labels_produce_unique_error():
+    report = build_valid_report()
+
+    report.blocks.append(
+        AppendixBlock(
+            label="А",
+            title="Ещё одно приложение А",
+            children=[TextBlock(text="Дублирующая метка приложения.")],
+        )
+    )
+
+    result = validate_report(report)
+
+    error_codes = {issue.code for issue in result.errors}
+    assert "APPENDIX_LABELS_UNIQUE" in error_codes
+
+
+def test_appendix_labels_out_of_order_produce_warning():
+    report = build_valid_report()
+
+    appendices = [block for block in report.blocks if isinstance(block, AppendixBlock)]
+    assert appendices, "В build_valid_report должно быть хотя бы одно приложение"
+    app_a = appendices[0]
+
+    report.blocks = [
+        block for block in report.blocks if not isinstance(block, AppendixBlock)
+    ]
+    app_b = AppendixBlock(
+        label="Б",
+        title="Приложение Б",
+        children=[TextBlock(text="Приложение Б.")],
+    )
+    report.blocks.extend([app_b, app_a])
+
+    result = validate_report(report)
+
+    warning_codes = {issue.code for issue in result.warnings}
+    assert "APPENDIX_LABELS_ORDER" in warning_codes
+
+
+def test_incorrect_figure_numbering_produces_numbering_error():
+    report = build_valid_report()
+
+    for block in iter_blocks(report):
+        if isinstance(block, FigureBlock):
+            block.caption = "Рисунок 2 – Неправильный номер"
+            break
+
+    result = validate_report(report)
+
+    error_codes = {issue.code for issue in result.errors}
+    assert "FIGURE_TABLE_NUMBERING_CONSISTENT" in error_codes
+
+
+def test_missing_references_block_produces_warning():
+    report = build_valid_report()
+
+    report.blocks = [
+        block for block in report.blocks if not isinstance(block, ReferencesBlock)
+    ]
+
+    result = validate_report(report)
+
+    warning_codes = {issue.code for issue in result.warnings}
+    assert "REFERENCES_PRESENT_IF_NEEDED" in warning_codes
+
+
+def test_empty_references_block_produces_error():
+    report = build_valid_report()
+
+    for block in iter_blocks(report):
+        if isinstance(block, ReferencesBlock):
+            block.items = []
+            break
+
+    result = validate_report(report)
+
+    error_codes = {issue.code for issue in result.errors}
+    assert "LIST_OF_REFERENCES_NOT_EMPTY" in error_codes
