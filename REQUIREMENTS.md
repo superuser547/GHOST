@@ -245,7 +245,7 @@ The system must support the following **block types** (structural elements) in t
 10. **Appendix Block** (`APPENDIX`)
     - Represents a separate appendix (e.g., “ПРИЛОЖЕНИЕ А”).
     - Properties:
-      - `label: str` – letter index (“А”, “Б”, “В”, etc. without Ё, З, Й, О, Ч, Ъ, Ы, Ь).
+    - `label: str` – letter index (“А”, “Б”, “В”, etc. without Ё, Э, Й, О, Ч, Ъ, Ы, Ь).
       - `title: str` – title of the appendix.
       - `children: list[ReportBlock]` – content blocks within the appendix (text, tables, figures, etc.).
 
@@ -372,7 +372,7 @@ The system must implement at least the following rules (as in 5.2 of ТЗ):
    - Duplicate labels → **error**.
 
 8. `APPENDIX_LABELS_ORDER` (optional but desired in first version)
-   - If implemented, ensures appendices follow alphabetical order (A, Б, В, … without Ё, З, Й, О, Ч, Ъ, Ы, Ь).
+   - If implemented, ensures appendices follow alphabetical order (A, Б, В, … without Ё, Э, Й, О, Ч, Ъ, Ы, Ь).
    - Out-of-order or invalid labels → `warning` or `error` as determined by the spec (at minimum `warning`).
 
 9. `FIGURE_TABLE_NUMBERING_CONSISTENT`
@@ -388,6 +388,12 @@ The system must implement at least the following rules (as in 5.2 of ТЗ):
 11. `LIST_OF_REFERENCES_NOT_EMPTY`
     - If a `REFERENCES` block exists, check that `items` is not empty.
     - Empty references list → at least a `warning` (can be stricter if desired).
+
+12. `REFERENCES_WITHIN_5_YEARS` (warning-only)
+    - По методическим указаниям МИСИС год издания источников, как правило, не должен превышать 5 лет.
+    - Приложение не блокирует более старые источники, но помечает такие записи как `warning`
+      и отображает предупреждение в панели ошибок/предупреждений.
+    - Ответственность за окончательное соблюдение 5-летнего лимита остаётся на пользователе.
 
 Additional rules may be added in the future, but the above form the **minimum validation set** for the first release.
 
@@ -422,7 +428,23 @@ The generated `.docx` report must:
 - Section titles such as “ВВЕДЕНИЕ”, “ЗАКЛЮЧЕНИЕ”, “СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ” must appear as required by MISIS:
   - often uppercase, centered for some specific sections, etc. – these details are to be captured in the template.
 
-#### 1.8.3. Figures and Tables Numbering
+#### 1.8.3. Table Formatting
+
+- Основной текст отчёта оформляется по общим правилам пресета (Times New Roman 12 pt, интервал 1.5).
+- Текст внутри таблиц должен соответствовать методичке МИСИС:
+  - Шрифт содержимого таблиц и шапки: Times New Roman, 10 pt.
+  - Межстрочный интервал в таблицах: одинарный (1.0).
+  - Выравнивание текста в ячейках по умолчанию: по левому краю.
+  - Допускается выравнивание по центру для заголовков строк/столбцов, если это согласуется с методичкой.
+- Сохраняются следующие требования к оформлению таблиц:
+  - Подпись таблицы: `Таблица N – Название` (Times New Roman 12 pt, без лишних интервалов).
+  - Таблица выравнивается по центру страницы.
+  - Интервал перед текстом после таблицы: 6 pt.
+  - Запрещена колонка с порядковым номером (№ п/п и аналогичные).
+  - Таблицы нельзя вставлять как изображения; должна быть текстовая таблица с шапкой.
+  - При переносе на следующую страницу используется «Продолжение таблицы N» и дублирование шапки.
+
+#### 1.8.4. Figures and Tables Numbering
 
 - Figures:
   - Numbered globally in the main text OR per section, as specified by the MISIS rules (implementation detail to be finalized in template).
@@ -433,7 +455,7 @@ The generated `.docx` report must:
 - Appendices:
   - Figures and tables within appendices may use a prefix with the appendix label (e.g., `Рисунок А.1`), depending on the preset; the template and numbering scheme in the generator must reflect this.
 
-#### 1.8.4. Table of Contents
+#### 1.8.5. Table of Contents
 
 - The DOCX must contain a **correct table of contents** (СОДЕРЖАНИЕ):
   - All relevant headings must appear in the TOC.
@@ -444,7 +466,7 @@ The generated `.docx` report must:
   - Pandoc is invoked with `--toc` and reference doc that properly formats the TOC.
   - The resulting docx must already contain a static or properly updated TOC, such that the user does not need to press Ctrl+A → F9.
 
-#### 1.8.5. File Name
+#### 1.8.6. File Name
 
 - When exporting, the backend must generate a file name based on report meta:
   - Student last name (or full name in Latin or transliterated form),
@@ -452,15 +474,28 @@ The generated `.docx` report must:
   - Discipline abbreviation (or code),
   - Work type abbreviation (e.g., `PR`, `LR`),
   - Work number.
-- Example format:
-  - `Ivanov_BBI-24-3_GTS_PR1.docx`
-- The exact pattern must be:
+
+- **Нормативный формат (по методичке МИСИС)**:
 
   ```text
-  {StudentLastName}_{Group}_{DisciplineAbbrev}_{WorkTypeShort}{WorkNumber}.{ext}
+  {StudentLastNameLatin}_{Group}_{DisciplineAbbrev}_{WorkTypeShort}№{WorkNumber}.{ext}
   ```
 
-  (where `ext` is `docx` or `pdf`);
+  Пример:
+  `Ivanov_BBI-24-3_TOiP_PR№1.docx`
+
+- **Фактический формат, используемый приложением**:
+
+  ```text
+  {StudentLastNameLatin}_{Group}_{DisciplineAbbrev}_{WorkTypeShort}{WorkNumber}.{ext}
+  ```
+
+  Пример:
+  `Ivanov_BBI-24-3_TOiP_PR1.docx`
+
+- Приложение по умолчанию использует упрощённый формат без символа № для большей совместимости
+  с различными операционными системами и файловыми системами. При необходимости пользователь может
+  вручную переименовать файл в строго нормативный формат с № перед номером работы.
 
 - Discipline abbreviation and `WorkTypeShort` normalization rules must be specified in code (e.g., mapping to MISIS abbreviations or a simplified standard).
 
