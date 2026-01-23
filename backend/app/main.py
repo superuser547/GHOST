@@ -3,15 +3,15 @@ from fastapi import FastAPI
 from app.api.v1.reports import router as reports_router
 
 app = FastAPI(
-    title="GHOST Report Builder API",
-    description="Backend API for the GHOST report constructor (MISIS / GOST).",
+    title="API конструктора отчётов GHOST",
+    description="API серверной части конструктора отчётов GHOST (МИСИС / ГОСТ).",
     version="0.1.0",
 )
 
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Simple healthcheck endpoint to verify that the backend is running."""
+    """Простой эндпоинт проверки состояния для проверки работы бэкенда."""
     return {"status": "ok"}
 
 

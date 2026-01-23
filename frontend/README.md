@@ -1,4 +1,4 @@
-# Frontend (React + Vite + TypeScript)
+# Фронтенд (React + Vite + TypeScript)
 
 Это SPA на React/TypeScript для проекта GHOST.
 В будущем здесь появится визуальный конструктор отчётов с блоками, проверками и экспортом.
@@ -25,7 +25,7 @@ npm run dev
 
 - Приложение будет доступно по адресу, который покажет Vite (обычно `http://localhost:5173`).
 
-## Сборка в production-режиме
+## Сборка в продакшн-режиме
 
 ```bash
 cd frontend

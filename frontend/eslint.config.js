@@ -10,7 +10,7 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks'
 import prettier from 'eslint-config-prettier'
 
 export default [
-  // Global ignores (замена .eslintignore для flat config)
+  // Глобальные исключения (замена .eslintignore для flat config)
   {
     ignores: ['node_modules/**', 'dist/**', 'coverage/**', '*.min.*'],
   },
@@ -47,6 +47,6 @@ export default [
     },
   },
 
-  // Turn off stylistic rules that конфликтуют с Prettier
+  // Отключить стилистические правила, которые конфликтуют с Prettier
   prettier,
 ]

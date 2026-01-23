@@ -6,17 +6,17 @@ from app.models import Report, ValidationIssue, ValidationIssueLevel, Validation
 
 ValidationRule = Callable[[Report], List[ValidationIssue]]
 
-#: Global registry of validation rules.
+#: Глобальный реестр правил валидации.
 RULES: List[ValidationRule] = []
 
 
 def validate_report(report: Report) -> ValidationResult:
     """
-    Run all registered validation rules against the given report and
-    aggregate their issues into a single ValidationResult.
+    Запускает все зарегистрированные правила валидации для переданного отчёта и
+    агрегирует их замечания в единый ValidationResult.
 
-    At this stage (C2) the RULES registry is empty, so the function will
-    always return an empty result (no errors, no warnings).
+    На текущем этапе (C2) реестр RULES пуст, поэтому функция всегда возвращает
+    пустой результат (без ошибок и предупреждений).
     """
 
     errors: List[ValidationIssue] = []
