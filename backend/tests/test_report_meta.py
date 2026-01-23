@@ -47,3 +47,28 @@ def test_report_meta_serialization_roundtrip():
 
     assert meta2 == meta
     assert meta2.work_type == WorkType.LAB
+
+
+def test_report_meta_custom_work_type_is_preserved():
+    meta = ReportMeta(
+        preset="misis_v1",
+        work_type=WorkType.OTHER,
+        work_number=None,
+        work_type_custom="Индивидуальный проект",
+        discipline="Физика",
+        topic="Индивидуальное задание",
+        student_full_name="Сидоров Сидор Сидорович",
+        group="ББИ-24-3",
+        semester="2",
+        direction_code="38.03.05",
+        direction_name="Бизнес-информатика",
+        department="Кафедра физики",
+        teacher_full_name="Иванова Анна Сергеевна",
+        submission_date=date(2025, 6, 1),
+    )
+
+    data = meta.model_dump()
+    restored = ReportMeta(**data)
+
+    assert restored.work_type is WorkType.OTHER
+    assert restored.work_type_custom == "Индивидуальный проект"
