@@ -144,20 +144,7 @@ The report must adhere to ГОСТ and internal NITU MISIS formatting rules (her
 
 The goal is for the PDF formatting to mirror the DOCX result as closely as possible.
 
-#### 1.3.7. Pandoc CLI Dependency
-
-DOCX (и PDF) экспорт выполняется через CLI-утилиту **Pandoc**.
-
-- Приложение ожидает, что бинарь доступен как команда `pandoc` в `PATH`.
-- Путь к бинарю можно переопределить через переменную окружения `PANDOC_BIN`.
-
-Проверка установки:
-
-```bash
-pandoc --version
-```
-
-#### 1.3.8. Scenario: Save and Load Report Projects
+#### 1.3.7. Scenario: Save and Load Report Projects
 
 1. The user can save the entire report in a **project file** (e.g., `.report.json`):
    - This file contains the full `Report` model, including:
