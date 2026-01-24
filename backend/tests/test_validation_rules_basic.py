@@ -254,3 +254,49 @@ def test_empty_references_block_produces_error():
 
     error_codes = {issue.code for issue in result.errors}
     assert "LIST_OF_REFERENCES_NOT_EMPTY" in error_codes
+
+
+def test_list_with_manual_markers_produces_warning():
+    report = build_valid_report()
+
+    for block in iter_blocks(report):
+        if isinstance(block, ListBlock):
+            block.items = ["- Первый пункт", "2) Второй пункт"]
+            break
+
+    result = validate_report(report)
+
+    warning_codes = {issue.code for issue in result.warnings}
+    assert "LIST_MARKER_FORMAT" in warning_codes
+
+
+def test_table_with_order_number_column_produces_warning():
+    report = build_valid_report()
+
+    for block in iter_blocks(report):
+        if isinstance(block, TableBlock):
+            block.rows = [
+                ["№", "Колонка 2"],
+                ["1", "a"],
+                ["2", "b"],
+            ]
+            break
+
+    result = validate_report(report)
+
+    warning_codes = {issue.code for issue in result.warnings}
+    assert "TABLE_REQUIREMENTS" in warning_codes
+
+
+def test_figure_with_incorrect_caption_format_produces_warning():
+    report = build_valid_report()
+
+    for block in iter_blocks(report):
+        if isinstance(block, FigureBlock):
+            block.caption = "Схема установки"
+            break
+
+    result = validate_report(report)
+
+    warning_codes = {issue.code for issue in result.warnings}
+    assert "FIGURE_REQUIREMENTS" in warning_codes

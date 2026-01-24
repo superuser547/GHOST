@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.v1.presets import router as presets_router
 from app.api.v1.reports import router as reports_router
 
 app = FastAPI(
@@ -16,3 +17,4 @@ async def health_check() -> dict[str, str]:
 
 
 app.include_router(reports_router, prefix="/api/v1")
+app.include_router(presets_router)

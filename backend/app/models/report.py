@@ -33,12 +33,18 @@ class ReportMeta(BaseModel):
     """
     Метаданные отчёта для генерации титульной страницы
     и формирования имени файла.
+
+    Если `work_type` == WorkType.OTHER, поле `work_type_custom`
+    содержит человекочитаемое название работы. Оно используется
+    на титульном листе и при формировании имени итогового файла.
     """
 
     preset: str = "misis_v1"
 
     work_type: WorkType
     work_number: Optional[int] = None
+    # Человекочитаемое название работы при work_type == WorkType.OTHER
+    work_type_custom: Optional[str] = None
 
     discipline: str
     topic: str
@@ -60,7 +66,7 @@ class BaseBlock(BaseModel):
     Базовый блок в структуре отчёта.
 
     Специализированные типы блоков (раздел, текст, таблица, рисунок и т.д.)
-    будут расширять эту модель в следующих коммитах.
+    расширяют эту модель и переопределяют поле `type`.
     """
 
     id: UUID = Field(default_factory=uuid4)
@@ -71,6 +77,13 @@ class BaseBlock(BaseModel):
 class SectionBlock(BaseBlock):
     """
     Верхнеуровневый раздел отчёта (например, ВВЕДЕНИЕ, ЗАКЛЮЧЕНИЕ).
+
+    Поле `special_kind` используется для пометки служебных разделов:
+    - "INTRO" — введение,
+    - "CONCLUSION" — заключение,
+    - "REFERENCES" — список использованных источников.
+
+    Это упрощает валидацию и генерацию DOCX по методичке МИСИС.
     """
 
     type: Literal[ReportBlockType.SECTION] = ReportBlockType.SECTION
@@ -80,7 +93,11 @@ class SectionBlock(BaseBlock):
 
 class SubsectionBlock(BaseBlock):
     """
-    Подраздел внутри раздела (уровень 2 или 3).
+    Подраздел внутри раздела.
+
+    Поле `level` задаёт уровень заголовка в структуре отчёта:
+    - 2 — заголовок второго уровня (например, 1.1),
+    - 3 — заголовок третьего уровня (например, 1.1.1).
     """
 
     type: Literal[ReportBlockType.SUBSECTION] = ReportBlockType.SUBSECTION
