@@ -5,7 +5,7 @@ from typing import Dict
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Cm, Pt
+from docx.shared import Cm, Pt, RGBColor
 
 from app.models import (
     AppendixBlock,
@@ -13,6 +13,7 @@ from app.models import (
     ListBlock,
     ReferencesBlock,
     Report,
+    ReportBlock,
     ReportMeta,
     SectionBlock,
     SubsectionBlock,
@@ -20,6 +21,7 @@ from app.models import (
     TextBlock,
     WorkType,
 )
+from app.services.docx.numbering import ensure_multilevel_heading_numbering
 from app.services.presets import get_preset
 
 
@@ -134,6 +136,7 @@ def _apply_base_text_style_for_misis(doc: Document) -> None:
     font = style.font
     font.name = "Times New Roman"
     font.size = Pt(12)
+    font.color.rgb = RGBColor(0, 0, 0)
 
     paragraph_format = style.paragraph_format
     paragraph_format.left_indent = Cm(0)
@@ -162,6 +165,7 @@ def _apply_heading_styles_for_misis(doc: Document) -> None:
         font.name = "Times New Roman"
         font.size = Pt(12)
         font.bold = True
+        font.color.rgb = RGBColor(0, 0, 0)
 
         paragraph_format = style.paragraph_format
         paragraph_format.left_indent = Cm(0)
@@ -231,12 +235,21 @@ def _append_list_block(doc: Document, block: ListBlock) -> None:
     if not block.items:
         return
 
-    style_name = "List Bullet" if block.list_type == "bulleted" else "List Number"
-
-    for item in block.items:
+    for idx, item in enumerate(block.items, start=1):
         if not item:
             continue
-        paragraph = doc.add_paragraph(item, style=style_name)
+        if block.list_type == "numbered":
+            text = f"{idx}) {item}"
+        else:
+            text = f"– {item}"
+
+        paragraph = doc.add_paragraph(text, style="Normal")
+        pf = paragraph.paragraph_format
+        pf.left_indent = Cm(1.25)
+        pf.first_line_indent = Cm(0)
+        pf.line_spacing = 1.5
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
         paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
 
@@ -244,8 +257,13 @@ def _append_table_block(doc: Document, block: TableBlock) -> None:
     if not block.rows:
         return
 
-    caption_paragraph = doc.add_paragraph(block.caption or "")
+    caption_paragraph = doc.add_paragraph(block.caption or "", style="Normal")
     caption_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    cpf = caption_paragraph.paragraph_format
+    cpf.left_indent = Cm(0)
+    cpf.first_line_indent = Cm(0)
+    cpf.space_before = Pt(12)
+    cpf.space_after = Pt(6)
 
     rows_count = len(block.rows)
     cols_count = len(block.rows[0]) if block.rows[0] else 0
@@ -254,19 +272,41 @@ def _append_table_block(doc: Document, block: TableBlock) -> None:
 
     table = doc.add_table(rows=rows_count, cols=cols_count)
     table.style = "Table Grid"
+    table.autofit = True
 
     for r_idx, row in enumerate(block.rows):
         for c_idx, value in enumerate(row):
             cell = table.cell(r_idx, c_idx)
             cell.text = value or ""
 
-    doc.add_paragraph()
+    for row in table.rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.style = doc.styles["Normal"]
+                pf = paragraph.paragraph_format
+                pf.left_indent = Cm(0)
+                pf.first_line_indent = Cm(0)
+                pf.line_spacing = 1.0
+                pf.space_before = Pt(0)
+                pf.space_after = Pt(0)
+
+    after = doc.add_paragraph("", style="Normal")
+    af = after.paragraph_format
+    af.space_before = Pt(6)
+    af.space_after = Pt(0)
 
 
 def _append_figure_block(doc: Document, block: FigureBlock) -> None:
-    doc.add_paragraph("(место для рисунка)")
-    caption_paragraph = doc.add_paragraph(block.caption or "")
+    doc.add_paragraph("")
+
+    caption_paragraph = doc.add_paragraph(block.caption or "", style="Normal")
     caption_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = caption_paragraph.paragraph_format
+    pf.left_indent = Cm(0)
+    pf.first_line_indent = Cm(0)
+    pf.line_spacing = 1.5
+    pf.space_before = Pt(6)
+    pf.space_after = Pt(6)
 
 
 def _append_references_block(doc: Document, block: ReferencesBlock) -> None:
@@ -277,6 +317,12 @@ def _append_references_block(doc: Document, block: ReferencesBlock) -> None:
         if not item:
             continue
         paragraph = doc.add_paragraph(f"{idx}) {item}", style="Normal")
+        pf = paragraph.paragraph_format
+        pf.left_indent = Cm(1.25)
+        pf.first_line_indent = Cm(0)
+        pf.line_spacing = 1.5
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
         paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
 
@@ -292,27 +338,37 @@ def _append_appendix_block(doc: Document, block: AppendixBlock) -> None:
         subtitle_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
+def _render_block(doc: Document, block: ReportBlock) -> None:
+    if isinstance(block, SectionBlock):
+        _append_section_block(doc, block)
+        for child in block.children:
+            _render_block(doc, child)
+    elif isinstance(block, SubsectionBlock):
+        _append_subsection_block(doc, block)
+        for child in block.children:
+            _render_block(doc, child)
+    elif isinstance(block, TextBlock):
+        _append_text_block(doc, block)
+    elif isinstance(block, ListBlock):
+        _append_list_block(doc, block)
+    elif isinstance(block, TableBlock):
+        _append_table_block(doc, block)
+    elif isinstance(block, FigureBlock):
+        _append_figure_block(doc, block)
+    elif isinstance(block, ReferencesBlock):
+        _append_references_block(doc, block)
+    elif isinstance(block, AppendixBlock):
+        _append_appendix_block(doc, block)
+        for child in block.children:
+            _render_block(doc, child)
+
+
 def _append_report_blocks(doc: Document, report: Report) -> None:
     """
     Добавляет в документ основную часть отчёта на основе структуры блоков.
     """
     for block in report.blocks:
-        if isinstance(block, SectionBlock):
-            _append_section_block(doc, block)
-        elif isinstance(block, SubsectionBlock):
-            _append_subsection_block(doc, block)
-        elif isinstance(block, TextBlock):
-            _append_text_block(doc, block)
-        elif isinstance(block, ListBlock):
-            _append_list_block(doc, block)
-        elif isinstance(block, TableBlock):
-            _append_table_block(doc, block)
-        elif isinstance(block, FigureBlock):
-            _append_figure_block(doc, block)
-        elif isinstance(block, ReferencesBlock):
-            _append_references_block(doc, block)
-        elif isinstance(block, AppendixBlock):
-            _append_appendix_block(doc, block)
+        _render_block(doc, block)
 
 
 def build_docx(
@@ -341,12 +397,14 @@ def build_docx(
         _apply_page_settings_for_misis(doc)
         _apply_base_text_style_for_misis(doc)
         _apply_heading_styles_for_misis(doc)
+        ensure_multilevel_heading_numbering(doc)
         _add_simple_title_page(doc, report.meta)
 
     if title_template is not None:
         _apply_page_settings_for_misis(doc)
         _apply_base_text_style_for_misis(doc)
         _apply_heading_styles_for_misis(doc)
+        ensure_multilevel_heading_numbering(doc)
 
     doc.add_page_break()
     _append_report_blocks(doc, report)
