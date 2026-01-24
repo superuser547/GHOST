@@ -135,6 +135,39 @@ def rule_non_empty_lists(report: Report) -> List[ValidationIssue]:
     return issues
 
 
+def rule_list_marker_format(report: Report) -> List[ValidationIssue]:
+    """
+    Проверяет, что элементы списков не содержат вручную вставленных маркеров
+    или номеров (например, "- пункт" или "1) пункт").
+
+    Маркер/нумерация должны задаваться через поле `list_type`, а не в тексте.
+    """
+    issues: List[ValidationIssue] = []
+
+    for block in iter_blocks(report):
+        if not isinstance(block, ListBlock):
+            continue
+
+        for item in block.items:
+            if LIST_MARKER_PREFIX_RE.match(item or ""):
+                issues.append(
+                    ValidationIssue(
+                        code="LIST_MARKER_FORMAT",
+                        level=ValidationIssueLevel.WARNING,
+                        message=(
+                            "Элементы списка не должны содержать вручную "
+                            "вставленные маркеры или номера (например, '- ' "
+                            "или '1)'). Укажите тип списка в `list_type`, а "
+                            "формат маркера будет настроен автоматически."
+                        ),
+                        block_id=block.id,
+                    )
+                )
+                break
+
+    return issues
+
+
 def rule_figure_has_caption(report: Report) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
 
@@ -153,6 +186,44 @@ def rule_figure_has_caption(report: Report) -> List[ValidationIssue]:
     return issues
 
 
+def rule_figure_requirements(report: Report) -> List[ValidationIssue]:
+    """
+    Дополнительные требования к подписям рисунков.
+
+    Подпись должна иметь вид 'Рисунок N – Название' (или аналогичные
+    варианты с 'Рис.' / 'Figure' / 'Fig.'), то есть:
+
+    - начинается с допустимого префикса и номера (проверяет FIGURE_PATTERN);
+    - содержит символ '–' и текст после него.
+    """
+    issues: List[ValidationIssue] = []
+
+    for block in iter_blocks(report):
+        if not isinstance(block, FigureBlock):
+            continue
+
+        caption = (block.caption or "").strip()
+        if not caption:
+            continue
+
+        dash_index = caption.find("–")
+        if dash_index == -1 or caption[dash_index + 1 :].strip() == "":
+            issues.append(
+                ValidationIssue(
+                    code="FIGURE_REQUIREMENTS",
+                    level=ValidationIssueLevel.WARNING,
+                    message=(
+                        "Подпись рисунка должна иметь вид "
+                        "'Рисунок N – Название' согласно методическим "
+                        "указаниям."
+                    ),
+                    block_id=block.id,
+                )
+            )
+
+    return issues
+
+
 def rule_table_has_caption(report: Report) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
 
@@ -167,6 +238,63 @@ def rule_table_has_caption(report: Report) -> List[ValidationIssue]:
                         block_id=block.id,
                     )
                 )
+
+    return issues
+
+
+def rule_table_requirements(report: Report) -> List[ValidationIssue]:
+    """
+    Дополнительные требования к таблицам:
+
+    - Подпись должна иметь вид 'Таблица N – Название'.
+    - Таблица не должна содержать отдельную колонку с порядковым номером
+      ('№', '№ п/п', 'Номер' и т. п.) в первой колонке шапки.
+    """
+    issues: List[ValidationIssue] = []
+
+    for block in iter_blocks(report):
+        if not isinstance(block, TableBlock):
+            continue
+
+        caption = (block.caption or "").strip()
+        if caption:
+            if TABLE_PATTERN.match(caption):
+                dash_index = caption.find("–")
+                if dash_index == -1 or caption[dash_index + 1 :].strip() == "":
+                    issues.append(
+                        ValidationIssue(
+                            code="TABLE_REQUIREMENTS",
+                            level=ValidationIssueLevel.WARNING,
+                            message=(
+                                "Подпись таблицы должна иметь вид "
+                                "'Таблица N – Название' согласно методическим "
+                                "указаниям."
+                            ),
+                            block_id=block.id,
+                        )
+                    )
+
+        if not block.rows:
+            continue
+
+        header_row = block.rows[0]
+        if not header_row:
+            continue
+
+        first_cell = (header_row[0] or "").strip().lower()
+        if first_cell.startswith("№") or "номер" in first_cell:
+            issues.append(
+                ValidationIssue(
+                    code="TABLE_REQUIREMENTS",
+                    level=ValidationIssueLevel.WARNING,
+                    message=(
+                        "Таблица не должна содержать отдельную колонку с "
+                        "порядковым номером (например, '№' или '№ п/п') "
+                        "согласно методическим указаниям."
+                    ),
+                    block_id=block.id,
+                )
+            )
 
     return issues
 
@@ -252,6 +380,7 @@ def rule_appendix_labels_order(report: Report) -> List[ValidationIssue]:
 
 FIGURE_PATTERN = re.compile(r"^\s*(Рисунок|Рис\.|Figure|Fig\.)\s+(\d+)")
 TABLE_PATTERN = re.compile(r"^\s*(Таблица|Табл\.|Table|Tab\.)\s+(\d+)")
+LIST_MARKER_PREFIX_RE = re.compile(r"^\s*(?:[-•—]|\d+[.)])\s+")
 
 
 def rule_figure_table_numbering_consistent(report: Report) -> List[ValidationIssue]:
@@ -385,8 +514,11 @@ RULES.extend(
         rule_required_sections_present,
         rule_section_order,
         rule_non_empty_lists,
+        rule_list_marker_format,
         rule_figure_has_caption,
+        rule_figure_requirements,
         rule_table_has_caption,
+        rule_table_requirements,
         rule_section_ends_with_media,
         rule_appendix_labels_unique,
         rule_appendix_labels_order,
